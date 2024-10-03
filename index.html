@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Analysis with PyScript</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+</head>
+<body>
+
+    <h1>Sentiment Analysis</h1>
+    
+    <textarea id="inputText" placeholder="Enter text to analyze sentiment"></textarea>
+    <br />
+    <button py-click="analyzeSentiment">Analyze Sentiment</button>
+    
+    <h2>Sentiment Analysis Result:</h2>
+    <div id="result"></div>
+
+    <!-- PyScript code to call the FastAPI backend -->
+    <py-script>
+        import asyncio
+        import js
+
+        async def analyzeSentiment(event):
+            # Get the input text from the textarea
+            input_text = js.document.getElementById("inputText").value
+            
+            # Create the payload for the request
+            payload = {"text": input_text}
+            
+            # Send POST request to the FastAPI backend
+            response = await js.fetch('http://127.0.0.1:8000/analyze-sentiment', {
+                method: 'POST',
+                body: js.JSON.stringify(payload),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            
+            # Get the result from the response
+            result = await response.json()
+            
+            # Display the result in the HTML div
+            js.document.getElementById("result").innerHTML = f"Label: {result['label']}, Confidence: {round(result['score'] * 100, 2)}%"
+        
+    </py-script>
+
+</body>
+</html>
