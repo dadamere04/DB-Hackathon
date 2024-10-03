@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentiment Analysis</title>
+    <title>Sentiment and Sarcasm Analysis</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -42,15 +42,20 @@
             background-color: #e9ecef;
             border-radius: 5px;
         }
+        /* Red box for sarcasm */
+        .sarcasm-detected {
+            background-color: #ffcccc;
+            border: 2px solid red;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Sentiment Analysis</h1>
+    <h1>Sentiment and Sarcasm Analysis</h1>
 
     <div id="form-container">
-        <textarea id="inputText" placeholder="Enter text to analyze sentiment..."></textarea>
-        <button id="analyzeBtn">Analyze Sentiment</button>
+        <textarea id="inputText" placeholder="Enter text to analyze..."></textarea>
+        <button id="analyzeBtn">Analyze Text</button>
         <div id="result"></div>
     </div>
 
@@ -63,7 +68,8 @@
                 return;
             }
 
-            fetch('/analyze_sentiment', {
+            // Send POST request to /analyze_text
+            fetch('/analyze_text', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -75,10 +81,23 @@
                 if (data.error) {
                     document.getElementById("result").innerText = "Error: " + data.error;
                 } else {
-                    document.getElementById("result").innerHTML = `
-                        <strong>Sentiment:</strong> ${data.label}<br>
-                        <strong>Confidence:</strong> ${(data.score * 100).toFixed(2)}%
+                    const resultDiv = document.getElementById("result");
+                    const sarcasmDetected = data.sarcasm.is_sarcastic;
+                    
+                    // Reset any previous result styles
+                    resultDiv.classList.remove('sarcasm-detected');
+                    
+                    // Update result section with sentiment and sarcasm analysis
+                    resultDiv.innerHTML = `
+                        <strong>Sentiment:</strong> ${data.sentiment.label} (Score: ${(data.sentiment.score * 100).toFixed(2)}%)<br>
+                        <strong>Sarcasm:</strong> ${sarcasmDetected ? 'Yes' : 'No'}<br>
+                        <strong>Sarcasm Confidence:</strong> ${(data.sarcasm.confidence * 100).toFixed(2)}%
                     `;
+                    
+                    // If sarcasm is detected, add the red box
+                    if (sarcasmDetected) {
+                        resultDiv.classList.add('sarcasm-detected');
+                    }
                 }
             })
             .catch(error => {
