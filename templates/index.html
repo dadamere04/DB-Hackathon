@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentiment and Sarcasm Analysis</title>
+    <title>Sentiment Analysis</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -36,27 +36,39 @@
         button:hover {
             background-color: #0056b3;
         }
-        #result {
+        #result-container {
+            display: flex;
+            justify-content: space-between;
             margin-top: 20px;
-            padding: 10px;
-            background-color: #e9ecef;
-            border-radius: 5px;
         }
-        /* Red box for sarcasm */
-        .sarcasm-detected {
+        #sentiment-result, #sarcasm-result {
+            padding: 10px;
+            border-radius: 5px;
+            width: 48%;
+        }
+        #sentiment-result {
+            background-color: #e9ecef;
+        }
+        #sarcasm-result {
             background-color: #ffcccc;
             border: 2px solid red;
+            display: none; /* Hidden by default, only show if sarcasm is detected */
         }
     </style>
 </head>
 <body>
 
-    <h1>Sentiment and Sarcasm Analysis</h1>
+    <h1>Sentiment Analysis</h1>
 
     <div id="form-container">
         <textarea id="inputText" placeholder="Enter text to analyze..."></textarea>
         <button id="analyzeBtn">Analyze Text</button>
-        <div id="result"></div>
+
+        <!-- Container for results -->
+        <div id="result-container">
+            <div id="sentiment-result"></div>
+            <div id="sarcasm-result"></div>
+        </div>
     </div>
 
     <script>
@@ -79,29 +91,28 @@
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
-                    document.getElementById("result").innerText = "Error: " + data.error;
+                    document.getElementById("sentiment-result").innerText = "Error: " + data.error;
                 } else {
-                    const resultDiv = document.getElementById("result");
-                    const sarcasmDetected = data.sarcasm.is_sarcastic;
-                    
-                    // Reset any previous result styles
-                    resultDiv.classList.remove('sarcasm-detected');
-                    
-                    // Update result section with sentiment and sarcasm analysis
-                    resultDiv.innerHTML = `
-                        <strong>Sentiment:</strong> ${data.sentiment.label} (Score: ${(data.sentiment.score * 100).toFixed(2)}%)<br>
-                        <strong>Sarcasm:</strong> ${sarcasmDetected ? 'Yes' : 'No'}<br>
-                        <strong>Sarcasm Confidence:</strong> ${(data.sarcasm.confidence * 100).toFixed(2)}%
+                    // Display sentiment analysis result
+                    document.getElementById("sentiment-result").innerHTML = `
+                        <strong>Sentiment:</strong> ${data.sentiment.label}</br>
+                        Confidence: ${(data.sentiment.score * 100).toFixed(2)}%<br>
                     `;
-                    
-                    // If sarcasm is detected, add the red box
-                    if (sarcasmDetected) {
-                        resultDiv.classList.add('sarcasm-detected');
+
+                    // If sarcasm is detected, display the sarcasm result in the red box
+                    if (data.sarcasm.is_sarcastic) {
+                        const sarcasmResultDiv = document.getElementById("sarcasm-result");
+                        sarcasmResultDiv.innerHTML = `
+                            <strong>Warning: Possible Sarcasm Detected!</strong><br>
+                        `;
+                        sarcasmResultDiv.style.display = 'block';  // Show the sarcasm box
+                    } else {
+                        document.getElementById("sarcasm-result").style.display = 'none';  // Hide sarcasm box if not detected
                     }
                 }
             })
             .catch(error => {
-                document.getElementById("result").innerText = "An error occurred: " + error;
+                document.getElementById("sentiment-result").innerText = "An error occurred: " + error;
             });
         });
     </script>
