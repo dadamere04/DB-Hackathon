@@ -1,11 +1,8 @@
 from flask import Flask, request, jsonify, render_template
+import requests
 from flask_cors import CORS
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
-import torch
-import string
 import os
 from dotenv import load_dotenv
-import requests
 
 load_dotenv()
 
@@ -50,7 +47,7 @@ if not SERPAPI_KEY:
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return app.send_static_file('index.html')
 
 # Endpoint for handling the Google News API request
 @app.route('/search_news', methods=['POST'])
@@ -77,42 +74,22 @@ def search_news():
         return jsonify({'error': f'Request failed: {e}'}), 500
 
 # Example sentiment and sarcasm analysis (replace this with actual logic)
-
 @app.route('/analyze_text', methods=['POST'])
 def analyze_text():
-    try:
-        data = request.json
-        text_input = data.get('text')
-        if not text_input:
-            return jsonify({'error': 'No text input provided'}), 400
+    data = request.json
+    text = data.get('text')
 
-        try:
-            # Sentiment Analysis
-            sentiment_result = sentiment_task(text_input)
-            app.logger.info("Sentiment Analysis Response: %s", sentiment_result)
+    if not text:
+        return jsonify({'error': 'Text input is required'}), 400
 
-            if isinstance(sentiment_result, list) and len(sentiment_result) > 0 and 'label' in sentiment_result[0]:
-                sentiment_label = sentiment_result[0]['label']
-                sentiment_score = sentiment_result[0]['score']
-            else:
-                return jsonify({'error': 'Unexpected sentiment response format'}), 500
+    # Dummy response for sentiment and sarcasm analysis
+    sentiment_result = {'label': 'POSITIVE', 'score': 0.95}
+    sarcasm_result = {'is_sarcastic': False}
 
-            # Sarcasm Detection
-            sarcasm_result = detect_sarcasm(text_input, sentiment_label)
-            app.logger.info("Sarcasm Detection Response: %s", sarcasm_result)
-
-            # Combine the results
-            return jsonify({
-                'sentiment': {'label': sentiment_label, 'score': sentiment_score},
-                'sarcasm': sarcasm_result
-            })
-
-        except Exception as e:
-            app.logger.error("Error occurred in /analyze_text: %s", e)
-            return jsonify({'error': str(e)}), 500
-    except Exception as e:
-        app.logger.error("Error occurred in /analyze_text: %s", e)
-        return jsonify({'error': str(e)}), 500
+    return jsonify({
+        'sentiment': sentiment_result,
+        'sarcasm': sarcasm_result
+    })
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=True)
