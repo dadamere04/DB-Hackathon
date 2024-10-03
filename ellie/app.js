@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-
-const BACKEND_URL = 'http://localhost:3000/get-reviews'; // Your backend server
 
 function App() {
-  const [placeName, setPlaceName] = useState('');
-  const [reviews, setReviews] = useState([]);
-  const [sentiments, setSentiments] = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [sentiment, setSentiment] = useState(null);
 
   // Initialize Hugging Face sentiment pipeline
   const initSentimentModel = async () => {
@@ -14,74 +10,51 @@ function App() {
     return sentimentPipeline;
   };
 
-  // Function to fetch place ID using Google Places API (through backend)
-  const getPlaceId = async () => {
-    const response = await axios.get(`https://maps.googleapis.com/maps/api/place/findplacefromtext/json`, {
-      params: {
-        input: placeName,
-        inputtype: 'textquery',
-        fields: 'place_id',
-        key: 'YOUR_GOOGLE_API_KEY', // Replace with your key
-      },
-    });
-
-    if (response.data.candidates.length > 0) {
-      return response.data.candidates[0].place_id;
-    } else {
-      alert('Place not found!');
-      return null;
+  // Function to perform sentiment analysis on the input text
+  const analyzeSentiment = async () => {
+    if (!inputText) {
+      alert('Please enter some text');
+      return;
     }
-  };
-
-  // Function to fetch reviews from backend and perform sentiment analysis
-  const getPlaceReviews = async () => {
-    const placeId = await getPlaceId();
-
-    if (!placeId) return;
 
     try {
-      const response = await axios.get(`${BACKEND_URL}?placeId=${placeId}`);
-      const reviewsData = response.data.result.reviews;
-
-      setReviews(reviewsData);
-
-      // Initialize sentiment model and perform sentiment analysis on reviews
+      // Initialize the Hugging Face sentiment model
       const sentimentPipeline = await initSentimentModel();
-      const sentimentsData = await Promise.all(
-        reviewsData.map((review) => sentimentPipeline(review.text))
-      );
 
-      setSentiments(sentimentsData);
+      // Perform sentiment analysis on the input text
+      const sentimentData = await sentimentPipeline(inputText);
+
+      // Set the sentiment result
+      setSentiment(sentimentData[0]);
     } catch (error) {
-      console.error('Error fetching reviews:', error);
+      console.error('Error analyzing sentiment:', error);
     }
   };
 
   return (
     <div className="App">
-      <h1>Google Reviews Sentiment Analysis</h1>
-      <input
-        type="text"
-        value={placeName}
-        onChange={(e) => setPlaceName(e.target.value)}
-        placeholder="Enter place name"
-      />
-      <button onClick={getPlaceReviews}>Get Reviews and Analyze Sentiment</button>
+      <h1>Sentiment Analysis Tool</h1>
+
+      <textarea
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        placeholder="Enter text to analyze sentiment"
+        rows="5"
+        cols="50"
+      ></textarea>
+      <br />
+
+      <button onClick={analyzeSentiment}>Analyze Sentiment</button>
 
       <div>
-        <h2>Reviews:</h2>
-        {reviews.length > 0 ? (
-          reviews.map((review, index) => (
-            <div key={index}>
-              <p><strong>Author:</strong> {review.author_name}</p>
-              <p><strong>Review:</strong> {review.text}</p>
-              <p><strong>Rating:</strong> {review.rating}</p>
-              <p><strong>Sentiment:</strong> {sentiments[index] ? sentiments[index][0].label : 'Analyzing...'}</p>
-              <hr />
-            </div>
-          ))
+        {sentiment ? (
+          <div>
+            <h2>Sentiment Analysis Result:</h2>
+            <p><strong>Label:</strong> {sentiment.label}</p>
+            <p><strong>Confidence:</strong> {Math.round(sentiment.score * 100)}%</p>
+          </div>
         ) : (
-          <p>No reviews available</p>
+          <p>Enter some text and click "Analyze Sentiment" to see the result.</p>
         )}
       </div>
     </div>
