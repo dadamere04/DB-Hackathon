@@ -4,7 +4,7 @@ const app = express();
 const port = 3000;
 
 // Google API Key (replace with your key)
-const API_KEY = 'YOUR_GOOGLE_API_KEY';
+const API_KEY = env.GOOGLE_API_KEY;
 
 // Endpoint to get reviews from Google Places API
 app.get('/get-reviews', async (req, res) => {
