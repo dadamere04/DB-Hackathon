@@ -8,11 +8,21 @@
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: #2b2843;
         }
         h1 {
             text-align: center;
+            color: white;
         }
+        h4 {
+            text-align: center;
+            color: white;
+        }
+        h5 {
+            text-align: center;
+            color: white;
+        }
+
         #form-container {
             max-width: 50%;
             margin: 0 auto;
@@ -68,6 +78,19 @@
             border: 2px solid red;
             display: none; /* Hidden by default, only show if sarcasm is detected */
         }
+        #sentiment-result-up, #sarcasm-result-up {
+            padding: 10px;
+            border-radius: 5px;
+            width: 48%;
+        }
+        #sentiment-result-up {
+            background-color: #e9ecef;
+        }
+        #sarcasm-result-up {
+            background-color: #ffcccc;
+            border: 2px solid red;
+            display: none; /* Hidden by default, only show if sarcasm is detected */
+        }
         #article{
             border: 1px solid #ddd;
             padding: 10px;
@@ -75,16 +98,18 @@
         }
         
         #news-results {
+            display: flex;
+            justify-content: space-between;
             margin-top: 20px;
-            background-color: #f9f9f9;
-            padding: 10px;
-            border: 1px solid #ddd;
         }
     </style>
 </head>
 <body>
 
-    <h1>Sentiment and News Search</h1>
+    <h1>Sentiment Analysis</h1> 
+    
+    <h4>Use this application to assess the semtiment (positive, negative, or neutral) of any text. You can search for recent Google News headlines for a given topic or company, input your own text, or upload a file. We also flag potential sarcasm, give a confidence score, and provide key words that influenced the analysis.</h4>
+    <h5>Created at the 2024 Innovate with Deutsche Bank Hackathon by Ellie Burton, Meredith Dada, Kenny Howard, and Jaylan Hunter. Thank you Deutsche Bank Cary DTI for hosting us!</h5>
 
     <div id="form-container">
         <!-- Search bar for company news -->
@@ -102,9 +127,74 @@
             <div id="sentiment-result-main"></div>
             <div id="sarcasm-result-main"></div>
         </div>
+
+        <!-- area to upload a file-->
+        <div id="upload-doc">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <input type="file" id="fileInput" name="file" accept=".txt,.pdf" />
+                <button type="submit" id="uploadBtn">Upload Document</button>
+            </form>
+            <div id="upload-result">
+                <div id="sentiment-result-up"></div>
+                <div id="sarcasm-result-up"></div>
+            </div>
+        </div>
     </div>
 
     <script>
+        // dealing with file upload
+        document.getElementById("uploadForm").addEventListener("submit", function (event) {
+            console.log("Uploading file...");
+    event.preventDefault(); // Prevent form from submitting normally
+    const formData = new FormData();
+    const fileInput = document.getElementById("fileInput").files[0];
+    if (!fileInput) {
+        alert("Please select a file to upload.");
+        return;
+    }
+
+    formData.append("file", fileInput);
+
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        //get div 
+        let uploadResult = document.getElementById("upload-result");
+        let sentimentDiv = document.getElementById("sentiment-result-up");
+        let sarcasmResultDiv = document.getElementById("sarcasm-result-up");
+    
+        console.log("Upload response:", data);
+        if (data.error) {
+            uploadResult.innerText = "Error: " + data.error;
+        } else {
+            sentimentDiv.innerHTML = `
+                        <strong>Sentiment:</strong> ${data.sentiment.label}</br>
+                        <strong>Confidence:</strong> ${(data.sentiment.score * 100).toFixed(2)}%<br>
+                    `;
+
+                    // If sarcasm is detected, display the sarcasm result in the red box
+                    if (data.sarcasm.is_sarcastic) {
+                        const sarcasmResultDiv = document.getElementById(`sarcasm-result`);
+                        sarcasmResultDiv.innerHTML = `
+                            <strong>Warning: Possible Sarcasm Detected!</strong><br>
+                        `;
+                        sarcasmResultDiv.style.display = 'block';  // Show the sarcasm box
+                    } else {
+                        document.getElementById(`sarcasm-result-up`).style.display = 'none';  // Hide sarcasm box if not detected
+                    }
+            console.log(data.message);
+        }
+    })
+    .catch(error => {
+        document.getElementById("upload-result").innerText = "An error occurred: " + error;
+    });
+});
+
+
+
         // Function to fetch news headlines from Flask API
         function fetchNews(company) {
             let i = 0;
@@ -130,7 +220,7 @@
                         articleDiv.id = `article`;
                         articleDiv.innerHTML = `
                             <h3>${article.title}</h3>
-                            <a href="${article.url}" target="_blank">Read more</a></br>
+                            <a href="${article.link}" target="_blank">Read more</a></br>
                         `;
                         //make sentiment-analysis div inside articleDiv
                         let sentimentDiv = document.createElement("div");

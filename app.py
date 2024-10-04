@@ -48,6 +48,51 @@ SERPAPI_KEY = os.getenv('SERPAPI_KEY')
 if not SERPAPI_KEY:
     raise ValueError("No SERPAPI_KEY found in environment variables!")
 
+ALLOWED_EXTENSIONS = {'txt', 'pdf'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    try:
+        if 'file' not in request.files:
+            app.logger.error("No file part in request")
+            return jsonify({'error': 'No file part'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            app.logger.error("No selected file")
+            return jsonify({'error': 'No selected file'}), 400
+        
+        if file and allowed_file(file.filename):
+            # Read the file content for analysis
+            file_content = file.read().decode('utf-8')
+            app.logger.info(f"File content read successfully: {file.filename}")
+            
+            # Perform sentiment analysis and sarcasm detection
+            sentiment_result = sentiment_task(file_content)
+            sentiment_label = sentiment_result[0]['label']
+            sentiment_score = sentiment_result[0]['score']
+            
+            sarcasm_result = detect_sarcasm(file_content, sentiment_label)
+            
+            return jsonify({
+                'message': f'File {file.filename} uploaded and analyzed successfully!',
+                'sentiment': {'label': sentiment_label, 'score': sentiment_score},
+                'sarcasm': sarcasm_result
+            })
+        else:
+            app.logger.error("File type not allowed")
+            return jsonify({'error': 'File not allowed. Only .txt files are accepted.'}), 400
+
+    except Exception as e:
+        app.logger.error(f"Error occurred during file upload: {e}")
+        return jsonify({'error': 'Internal Server Error', 'details': str(e)}), 500
+
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
