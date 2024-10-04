@@ -3,24 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentiment and News Search</title>
+    <title>TrueReview</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
-            background-color: #2b2843;
+            background-color: #e9f6ff;
         }
         h1 {
             text-align: center;
-            color: white;
         }
         h4 {
-            text-align: center;
-            color: white;
+            text-align: center;        
         }
         h5 {
             text-align: center;
-            color: white;
         }
 
         #form-container {
@@ -78,37 +75,35 @@
             border: 2px solid red;
             display: none; /* Hidden by default, only show if sarcasm is detected */
         }
-        #sentiment-result-up, #sarcasm-result-up {
+        #summary-result {
+            margin-top: 20px;
             padding: 10px;
-            border-radius: 5px;
-            width: 48%;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
         }
-        #sentiment-result-up {
-            background-color: #e9ecef;
+        #news-results {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
         }
-        #sarcasm-result-up {
-            background-color: #ffcccc;
-            border: 2px solid red;
-            display: none; /* Hidden by default, only show if sarcasm is detected */
-        }
-        #article{
+
+        /* Ensure each article is displayed as a block */
+        #article {
+            display: block;  /* Make sure each article takes a full line */
             border: 1px solid #ddd;
             padding: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 10px;  /* Add some spacing between articles */
+            width: 100%;  /* Ensure the article takes up full width */
         }
-        
-        #news-results {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
-        }
+
     </style>
 </head>
 <body>
 
-    <h1>Sentiment Analysis</h1> 
+    <h1>TrueReview</h1> 
     
-    <h4>Use this application to assess the semtiment (positive, negative, or neutral) of any text. You can search for recent Google News headlines for a given topic or company, input your own text, or upload a file. We also flag potential sarcasm, give a confidence score, and provide key words that influenced the analysis.</h4>
+    <h4>Use this application to assess the sentiment (positive, negative, or neutral) of any text. You can search for recent Google News headlines for a given topic or company, input your own text, or upload a file. We also flag potential sarcasm, give a confidence score, and provide key words that influenced the analysis.</h4>
     <h5>Created at the 2024 Innovate with Deutsche Bank Hackathon by Ellie Burton, Meredith Dada, Kenny Howard, and Jaylan Hunter. Thank you Deutsche Bank Cary DTI for hosting us!</h5>
 
     <div id="form-container">
@@ -122,13 +117,16 @@
         <textarea id="inputText" placeholder="Enter text to analyze..."></textarea>
         <button id="analyzeBtn">Analyze Text</button>
 
-        <!-- Container for sentiment and sarcasm results -->
+        <!-- Container for sentiment, sarcasm, and summary results -->
         <div id="result-container">
             <div id="sentiment-result-main"></div>
             <div id="sarcasm-result-main"></div>
         </div>
 
-        <!-- area to upload a file-->
+        <!-- Summary of sentiment analysis -->
+        <div id="summary-result"></div>
+
+        <!-- Area to upload a file -->
         <div id="upload-doc">
             <form id="uploadForm" enctype="multipart/form-data">
                 <input type="file" id="fileInput" name="file" accept=".txt,.pdf" />
@@ -140,64 +138,65 @@
             </div>
         </div>
     </div>
+    <footer>
+        <p>Technologies used: Flask, Python, HTML, CSS, JavaScript, Google News API (SerpApi), Hugging Face Models: cardiffnlp/twitter-roberta-base-sentiment-latest and helinivan/multilingual-sarcasm-detector</p> 
+    </footer>
 
     <script>
-        // dealing with file upload
+        // Handling file upload
         document.getElementById("uploadForm").addEventListener("submit", function (event) {
             console.log("Uploading file...");
-    event.preventDefault(); // Prevent form from submitting normally
-    const formData = new FormData();
-    const fileInput = document.getElementById("fileInput").files[0];
-    if (!fileInput) {
-        alert("Please select a file to upload.");
-        return;
-    }
+            event.preventDefault(); // Prevent form from submitting normally
+            const formData = new FormData();
+            const fileInput = document.getElementById("fileInput").files[0];
+            if (!fileInput) {
+                alert("Please select a file to upload.");
+                return;
+            }
 
-    formData.append("file", fileInput);
+            formData.append("file", fileInput);
 
-    fetch('/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        //get div 
-        let uploadResult = document.getElementById("upload-result");
-        let sentimentDiv = document.getElementById("sentiment-result-up");
-        let sarcasmResultDiv = document.getElementById("sarcasm-result-up");
-    
-        console.log("Upload response:", data);
-        if (data.error) {
-            uploadResult.innerText = "Error: " + data.error;
-        } else {
-            sentimentDiv.innerHTML = `
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                let uploadResult = document.getElementById("upload-result");
+                let sentimentDiv = document.getElementById("sentiment-result-up");
+                let sarcasmResultDiv = document.getElementById("sarcasm-result-up");
+            
+                console.log("Upload response:", data);
+                if (data.error) {
+                    uploadResult.innerText = "Error: " + data.error;
+                } else {
+                    sentimentDiv.innerHTML = `
                         <strong>Sentiment:</strong> ${data.sentiment.label}</br>
                         <strong>Confidence:</strong> ${(data.sentiment.score * 100).toFixed(2)}%<br>
                     `;
 
-                    // If sarcasm is detected, display the sarcasm result in the red box
+                    // Display sarcasm if detected
                     if (data.sarcasm.is_sarcastic) {
-                        const sarcasmResultDiv = document.getElementById(`sarcasm-result`);
                         sarcasmResultDiv.innerHTML = `
                             <strong>Warning: Possible Sarcasm Detected!</strong><br>
                         `;
-                        sarcasmResultDiv.style.display = 'block';  // Show the sarcasm box
+                        sarcasmResultDiv.style.display = 'block';
                     } else {
-                        document.getElementById(`sarcasm-result-up`).style.display = 'none';  // Hide sarcasm box if not detected
+                        sarcasmResultDiv.style.display = 'none';
                     }
-            console.log(data.message);
-        }
-    })
-    .catch(error => {
-        document.getElementById("upload-result").innerText = "An error occurred: " + error;
-    });
-});
 
+                    document.getElementById("summary-result").innerHTML = `
+                        <strong>Summary:</strong> ${data.summary}
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById("upload-result").innerText = "An error occurred: " + error;
+            });
+        });
 
-
-        // Function to fetch news headlines from Flask API
+        // Function to fetch news headlines
         function fetchNews(company) {
-            let i = 0;
             const newsResults = document.getElementById("news-results");
             newsResults.innerHTML = '';  // Clear previous results
             fetch('/search_news', {
@@ -209,11 +208,6 @@
             })
             .then(response => response.json())
             .then(data => {
-
-                // Log data for debugging
-                console.log("News Data:", data);
-
-                // Display each headline
                 if (data.length) {
                     data.forEach(article => {
                         let articleDiv = document.createElement("div");
@@ -222,53 +216,41 @@
                             <h3>${article.title}</h3>
                             <a href="${article.link}" target="_blank">Read more</a></br>
                         `;
-                        //make sentiment-analysis div inside articleDiv
-                        let sentimentDiv = document.createElement("div");
-                        sentimentDiv.id = `sentiment-result`;
-                        sentimentDiv.innerHTML = `Sentiment`;
-                        articleDiv.appendChild(sentimentDiv);
-
-                        let sarcasmDiv = document.createElement("div");
-                        sarcasmDiv.id = `sarcasm-result`;
-                        sarcasmDiv.innerHTML = `Sarcasm`;
-                        articleDiv.appendChild(sarcasmDiv);
-
                         newsResults.appendChild(articleDiv);
 
-
+                        // Sentiment analysis on the news headline
                         fetch('/analyze_text', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ text: article.title })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-condole.log("Error occurred.")                } else {
-                    // Display sentiment analysis result
-                    sentimentDiv.innerHTML = `
-                        <strong>Sentiment:</strong> ${data.sentiment.label}</br>
-                        <strong>Confidence:</strong> ${(data.sentiment.score * 100).toFixed(2)}%<br>
-                    `;
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ text: article.title })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                console.log("Error occurred.");
+                            } else {
+                                let sentimentDiv = document.createElement("div");
+                                sentimentDiv.id = `sentiment-result`;
+                                sentimentDiv.innerHTML = `
+                                    <strong>Sentiment:</strong> ${data.sentiment.label}</br>
+                                    <strong>Confidence:</strong> ${(data.sentiment.score * 100).toFixed(2)}%<br>
+                                `;
+                                articleDiv.appendChild(sentimentDiv);
 
-                    // If sarcasm is detected, display the sarcasm result in the red box
-                    if (data.sarcasm.is_sarcastic) {
-                        const sarcasmResultDiv = document.getElementById(`sarcasm-result`);
-                        sarcasmResultDiv.innerHTML = `
-                            <strong>Warning: Possible Sarcasm Detected!</strong><br>
-                        `;
-                        sarcasmResultDiv.style.display = 'block';  // Show the sarcasm box
-                    } else {
-                        document.getElementById(`sarcasm-result`).style.display = 'none';  // Hide sarcasm box if not detected
-                    }
-                    newsResults.appendChild(articleDiv);
-                    i++;
-
-                }
-            })
-                   });
+                                let sarcasmDiv = document.createElement("div");
+                                sarcasmDiv.id = `sarcasm-result`;
+                                if (data.sarcasm.is_sarcastic) {
+                                    sarcasmDiv.innerHTML = `<strong>Warning: Possible Sarcasm Detected!</strong><br>`;
+                                    sarcasmDiv.style.display = 'block';
+                                } else {
+                                    sarcasmDiv.style.display = 'none';
+                                }
+                                articleDiv.appendChild(sarcasmDiv);
+                            }
+                        });
+                    });
                 } else {
                     newsResults.innerHTML = "No news results found.";
                 }
@@ -289,7 +271,7 @@ condole.log("Error occurred.")                } else {
             fetchNews(company);
         });
 
-        // Existing sentiment and sarcasm detection logic
+        // Sentiment and sarcasm detection for input text
         document.getElementById("analyzeBtn").addEventListener("click", function() {
             const inputText = document.getElementById("inputText").value;
 
@@ -298,7 +280,6 @@ condole.log("Error occurred.")                } else {
                 return;
             }
 
-            // Send POST request to /analyze_text
             fetch('/analyze_text', {
                 method: 'POST',
                 headers: {
@@ -311,22 +292,23 @@ condole.log("Error occurred.")                } else {
                 if (data.error) {
                     document.getElementById("sentiment-result-main").innerText = "Error: " + data.error;
                 } else {
-                    // Display sentiment analysis result
+                    // Display sentiment and sarcasm results
                     document.getElementById("sentiment-result-main").innerHTML = `
                         <strong>Sentiment:</strong> ${data.sentiment.label}</br>
                         Confidence: ${(data.sentiment.score * 100).toFixed(2)}%<br>
                     `;
 
-                    // If sarcasm is detected, display the sarcasm result in the red box
+                    // Display sarcasm if detected
                     if (data.sarcasm.is_sarcastic) {
                         const sarcasmResultDiv = document.getElementById("sarcasm-result-main");
-                        sarcasmResultDiv.innerHTML = `
-                            <strong>Warning: Possible Sarcasm Detected!</strong><br>
-                        `;
-                        sarcasmResultDiv.style.display = 'block';  // Show the sarcasm box
+                        sarcasmResultDiv.innerHTML = `<strong>Warning: Possible Sarcasm Detected!</strong><br>`;
+                        sarcasmResultDiv.style.display = 'block';
                     } else {
-                        document.getElementById("sarcasm-result-main").style.display = 'none';  // Hide sarcasm box if not detected
+                        document.getElementById("sarcasm-result-main").style.display = 'none';
                     }
+
+                    // Display summary
+                    document.getElementById("summary-result").innerHTML = `<strong>Summary:</strong> ${data.summary}`;
                 }
             })
             .catch(error => {

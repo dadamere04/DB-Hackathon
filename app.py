@@ -6,6 +6,8 @@ import string
 import os
 from dotenv import load_dotenv
 import requests
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
 
 load_dotenv()
 
@@ -22,6 +24,11 @@ sarcasm_model_path = "helinivan/multilingual-sarcasm-detector"
 sarcasm_tokenizer = AutoTokenizer.from_pretrained(sarcasm_model_path)
 sarcasm_model = AutoModelForSequenceClassification.from_pretrained(sarcasm_model_path)
 
+# #keywords
+# model_name = "agentlans/flan-t5-small-keywords"
+# keyword_model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+# keyword_tokenizer = AutoTokenizer.from_pretrained(model_name)
+
 # Preprocessing function for sarcasm detection
 def preprocess_data(text: str) -> str:
     return text.lower().translate(str.maketrans("", "", string.punctuation)).strip()
@@ -36,7 +43,7 @@ def detect_sarcasm(text,sentiment):
     prediction = probs.index(confidence)
 
     print(f"og prediction: {prediction}, confidence: {confidence}")
-    if (prediction == 0 and confidence <0.99):
+    if (prediction == 0 and confidence <0.9):
         return {"is_sarcastic": True, "confidence": confidence}
     if (prediction == 1 and confidence <0.60):
         return {"is_sarcastic": False, "confidence": confidence}
@@ -91,7 +98,29 @@ def upload_file():
         app.logger.error(f"Error occurred during file upload: {e}")
         return jsonify({'error': 'Internal Server Error', 'details': str(e)}), 500
 
+# @app.route('/get_keywords', methods=['POST'])
+# def get_keywords():
+#     try:
+#         data = request.json
+#         text = data.get('text')
+        
+#         if not text:
+#             return jsonify({'error': 'No text provided'}), 400
 
+#         # Tokenize and generate keywords using the FLAN-T5 model
+#         inputs = keyword_tokenizer(text, return_tensors="pt")
+#         outputs = keyword_model.generate(**inputs, max_length=512)
+#         decoded_output = keyword_tokenizer.decode(outputs[0], skip_special_tokens=True)
+        
+#         # Process the output to get a list of keywords (split and remove duplicates)
+#         keywords = list(set(decoded_output.split('||')))
+        
+#         # Only return the top 3 keywords
+#         top_keywords = keywords[:3]
+
+#         return jsonify({'keywords': top_keywords})
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
 
 @app.route('/')
 def index():
